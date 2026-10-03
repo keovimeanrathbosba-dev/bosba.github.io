@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&family=Noto+Sans+Khmer:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #17302f; --muted: #5d6f6e; --line: #d6dfde; --paper: #f5f8f7; --card: #ffffff;
+    --brand: #0f5c5a; --brand-soft: #dcecea; --pending: #b7791f; --pending-soft: #fbf0d9;
+    --ok: #2f7d5b; --bad: #a32d2d; --bad-soft: #f8e1e1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Noto Sans", "Noto Sans Khmer", system-ui, sans-serif; color: var(--ink); background: var(--paper); line-height: 1.5; }
+  header { background: var(--brand); color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 700; }
+  header span { font-size: 13px; opacity: .85; }
+  .layout { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 56px); }
+  nav { border-right: 1px solid var(--line); background: var(--card); overflow-y: auto; }
+  nav button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 12px 18px; cursor: pointer; font: inherit; color: inherit; }
+  nav button:hover { background: var(--paper); }
+  nav button[aria-current="true"] { background: var(--brand-soft); box-shadow: inset 4px 0 0 var(--brand); }
+  nav .t { font-size: 14px; font-weight: 500; }
+  nav .m { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  nav .due { color: var(--pending); font-weight: 500; }
+  nav .done { color: var(--ok); font-weight: 500; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--brand); }
+  main { padding: 24px 28px 110px; max-width: 1000px; }
+  main h2 { margin: 0 0 4px; font-size: 22px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .period { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .period label { font-size: 13px; font-weight: 500; }
+  .period select { width: auto; min-width: 220px; }
+  .notice { background: var(--pending-soft); border-left: 4px solid var(--pending); padding: 10px 14px; font-size: 13px; margin-bottom: 14px; border-radius: 0 6px 6px 0; }
+  .notice.info { background: var(--brand-soft); border-left-color: var(--brand); }
+  .row { display: grid; grid-template-columns: 1fr 150px; gap: 8px 18px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: start; }
+  .row.changed { background: var(--pending-soft); margin: 0 -12px; padding: 12px; }
+  .row .label { font-size: 14px; }
+  .row .hint { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .row .pct { font-size: 12px; color: var(--ok); margin-top: 3px; }
+  .row.static .label { font-weight: 700; color: var(--brand); }
+  select, input[type=number], input[type=text] { width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid #aebdbb; border-radius: 6px; background: #fff; color: var(--ink); }
+  select:focus, input:focus, button:focus-visible { outline: 3px solid #7fb7b3; outline-offset: 1px; }
+  .savebar { position: fixed; left: 340px; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line); padding: 12px 28px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .savebar label { font-size: 13px; color: var(--muted); }
+  .savebar input { width: 230px; }
+  .primary { background: var(--brand); color: #fff; border: 0; border-radius: 6px; padding: 10px 20px; font: inherit; font-weight: 700; cursor: pointer; }
+  .primary:disabled { background: #9db3b1; cursor: not-allowed; }
+  .msg { font-size: 13px; }
+  .msg.ok { color: var(--ok); } .msg.err { color: var(--bad); }
+  .banner { background: var(--bad-soft); color: var(--bad); padding: 14px 18px; border-radius: 6px; margin: 24px; }
+  .empty { color: var(--muted); padding: 40px 0; }
+  .tablewrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+  table.hist { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.hist th, table.hist td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  table.hist th:first-child, table.hist td:first-child { text-align: left; white-space: normal; min-width: 240px; position: sticky; left: 0; background: var(--card); }
+  table.hist thead th { background: var(--paper); font-weight: 500; }
+  table.hist td button { border: 0; background: none; font: inherit; color: var(--brand); cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  table.hist td button:hover { background: var(--brand-soft); }
+  table.hist td.none button { color: var(--pending); }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+    nav { border-right: 0; border-bottom: 1px solid var(--line); max-height: 240px; }
+    .savebar { left: 0; padding: 12px 16px; }
+    main { padding: 18px 16px 160px; }
+    .row { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: no-preference) { .bar i { transition: width .4s; } }
+</style>
+</head>
+<body>
+<header><h1 id="title">Loading…</h1><span id="who"></span></header>
+<div id="error"></div>
+<div class="layout" id="app" hidden>
+  <nav id="nav" aria-label="Activities"></nav>
+  <main id="main"><p class="empty">Choose an Activity to report its progress.</p></main>
+</div>
+<div class="savebar" id="savebar" hidden>
+  <label for="name">Updated by</label>
+  <input type="text" id="name" placeholder="Your full name" autocomplete="name">
+  <button class="primary" id="save" disabled>Save</button>
+  <span class="msg" id="msg" role="status"></span>
+</div>
+
+<script>
+  var state = { items: [], periods: [], current: null, view: null, id: null, period: null, data: null, edits: {} };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function monthName(p) {
+    var parts = p.split('-');
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, 1).toLocaleString('en', { month: 'long', year: 'numeric' });
+  }
+  function monthShort(p) {
+    var parts = p.split('-');
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, 1).toLocaleString('en', { month: 'short', year: '2-digit' });
+  }
+  function pct(p) { return typeof p === 'number' ? Math.round(p * 100) + '%' : '—'; }
+  function fail(err) {
+    var m = (err && err.message) ? err.message : String(err);
+    $('error').innerHTML = ''; $('error').appendChild(el('div', 'banner', m.replace(/^Error:\s*/, '')));
+  }
+  function dirty() { return Object.keys(state.edits).length > 0 && state.view === 'activity' && state.dirtyFlag; }
+  function confirmLeave() { return !dirty() || confirm('Discard your unsaved changes?'); }
+
+  google.script.run.withSuccessHandler(function (d) {
+    $('title').textContent = d.title;
+    $('who').textContent = 'Signed in as ' + d.email;
+    state.items = d.items; state.periods = d.periods; state.current = d.current;
+    $('app').hidden = false;
+    renderNav();
+    if (d.items.length === 1) openActivity(d.items[0].id, d.current);
+  }).withFailureHandler(fail).getBootstrap();
+
+  /* ---- navigation ---- */
+  function renderNav() {
+    var nav = $('nav'); nav.innerHTML = '';
+    var ov = el('button');
+    ov.setAttribute('aria-current', state.view === 'overview' ? 'true' : 'false');
+    ov.appendChild(el('div', 't', 'History overview'));
+    var due = state.items.filter(function (i) { return !i.submitted; }).length;
+    ov.appendChild(el('div', 'm', due ? due + ' of ' + state.items.length + ' not yet submitted for ' + monthName(state.current) : 'All submitted for ' + monthName(state.current)));
+    ov.onclick = openOverview;
+    nav.appendChild(ov);
+
+    state.items.forEach(function (it) {
+      var b = el('button');
+      b.setAttribute('aria-current', state.view === 'activity' && state.id === it.id ? 'true' : 'false');
+      b.appendChild(el('div', 't', 'Activity ' + it.id + ': ' + it.title));
+      var m = el('div', 'm', pct(it.progress) + ' complete · ');
+      m.appendChild(el('span', it.submitted ? 'done' : 'due', it.submitted ? monthShort(state.current) + ' submitted' : monthShort(state.current) + ' not submitted'));
+      b.appendChild(m);
+      var bar = el('div', 'bar'), fill = el('i');
+      fill.style.width = Math.round((it.progress || 0) * 100) + '%';
+      bar.appendChild(fill); b.appendChild(bar);
+      b.onclick = function () { openActivity(it.id, state.current); };
+      nav.appendChild(b);
+    });
+  }
+
+  /* ---- history overview ---- */
+  function openOverview() {
+    if (!confirmLeave()) return;
+    state.view = 'overview'; state.edits = {}; state.dirtyFlag = false;
+    $('savebar').hidden = true; $('error').innerHTML = '';
+    $('main').innerHTML = ''; $('main').appendChild(el('p', 'empty', 'Loading history…'));
+    renderNav();
+    google.script.run.withSuccessHandler(renderOverview).withFailureHandler(fail).getOverview();
+  }
+
+  function renderOverview(d) {
+    var main = $('main'); main.innerHTML = '';
+    main.appendChild(el('h2', null, 'History overview'));
+    main.appendChild(el('div', 'sub', 'Progress at the end of each month, as submitted. Select a cell to view, enter or correct that month.'));
+    var wrap = el('div', 'tablewrap'), t = el('table', 'hist');
+    var head = el('tr'); head.appendChild(el('th', null, 'Activity'));
+    d.periods.forEach(function (p) { head.appendChild(el('th', null, monthShort(p))); });
+    var thead = el('thead'); thead.appendChild(head); t.appendChild(thead);
+    var tb = el('tbody');
+    d.items.forEach(function (it) {
+      var tr = el('tr');
+      tr.appendChild(el('td', null, it.id + ' · ' + it.title));
+      it.cells.forEach(function (c, i) {
+        var td = el('td', typeof c === 'number' ? '' : 'none');
+        var b = el('button', null, typeof c === 'number' ? pct(c) : (d.periods[i] === d.current ? 'Due' : 'Add'));
+        b.title = monthName(d.periods[i]) + ' – Activity ' + it.id;
+        b.onclick = function () { openActivity(it.id, d.periods[i]); };
+        td.appendChild(b); tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); wrap.appendChild(t); main.appendChild(wrap);
+  }
+
+  /* ---- activity form ---- */
+  function openActivity(id, period) {
+    if (!confirmLeave()) return;
+    state.view = 'activity'; state.id = id; state.period = period; state.edits = {}; state.dirtyFlag = false;
+    updateSave(); $('error').innerHTML = ''; $('msg').textContent = '';
+    $('main').innerHTML = ''; $('main').appendChild(el('p', 'empty', 'Loading Activity ' + id + '…'));
+    renderNav();
+    google.script.run.withSuccessHandler(function (d) {
+      state.data = d; renderActivity();
+    }).withFailureHandler(fail).getActivity(id, period);
+  }
+
+  function renderActivity() {
+    var d = state.data, main = $('main'); main.innerHTML = '';
+    main.appendChild(el('h2', null, 'Activity ' + d.id + ': ' + d.title));
+    main.appendChild(el('div', 'sub', pct(d.progress) + ' complete' + (d.saved ? ' · saved ' + d.saved.at + ' by ' + d.saved.by : ' · nothing saved for this month yet')));
+
+    var pr = el('div', 'period');
+    pr.appendChild(el('label', null, 'Reporting month'));
+    pr.firstChild.setAttribute('for', 'periodSel');
+    var sel = el('select'); sel.id = 'periodSel';
+    state.periods.forEach(function (p) {
+      var o = el('option', null, monthName(p) + (p === state.current ? ' (current)' : '')); o.value = p;
+      if (p === d.period) o.selected = true; sel.appendChild(o);
+    });
+    sel.onchange = function () {
+      var next = sel.value;
+      if (!confirmLeave()) { sel.value = d.period; return; }
+      state.dirtyFlag = false; openActivity(d.id, next);
+    };
+    pr.appendChild(sel); main.appendChild(pr);
+
+    if (d.isCurrent) {
+      main.appendChild(el('div', 'notice info', 'Update any sub-activity that has changed, then save. Saving updates the live tracker and stores this month\'s update in the history. If nothing has changed, save anyway to confirm ' + monthName(d.period) + '.'));
+    } else {
+      main.appendChild(el('div', 'notice', 'Enter the status as it stood at the end of ' + monthName(d.period) + '. Every sub-activity needs a value. This is saved to the history only; the live tracker is not changed.'));
+    }
+
+    d.rows.forEach(function (r) {
+      var row = el('div', 'row' + (r.editable ? '' : ' static'));
+      row.id = 'r' + r.row;
+      var left = el('div');
+      left.appendChild(el('div', 'label', r.label));
+      if (r.hint) left.appendChild(el('div', 'hint', r.hint));
+      if (r.editable && r.percent) left.appendChild(el('div', 'pct', 'Progress: ' + r.percent));
+      row.appendChild(left);
+      if (r.editable) row.appendChild(makeInput(r, row, d.isCurrent));
+      main.appendChild(row);
+    });
+    $('savebar').hidden = false;
+    if (!$('name').value) $('name').value = (d.saved && d.saved.by) || '';
+    updateSave();
+  }
+
+  function makeInput(r, row, isCurrent) {
+    var inp, saved = String(r.value);
+    if (r.options) {
+      inp = el('select');
+      if (saved === '' || r.options.indexOf(saved) < 0) {
+        var blank = el('option', null, '— select —'); blank.value = ''; inp.appendChild(blank);
+      }
+      r.options.forEach(function (o) { var op = el('option', null, o); op.value = o; inp.appendChild(op); });
+    } else {
+      inp = el('input'); inp.type = 'number'; inp.step = 'any';
+      if (r.min !== null) inp.min = r.min;
+      if (r.max !== null) inp.max = r.max;
+      if (r.isPct) inp.placeholder = '0–100 (%)';
+    }
+    inp.value = r.value;
+    inp.setAttribute('aria-label', r.label);
+    if (!isCurrent && saved !== '') state.edits[r.row] = saved;     // earlier month: start from what was saved
+
+    var handler = function () {
+      if (isCurrent) {
+        if (inp.value !== saved && inp.value !== '') state.edits[r.row] = inp.value; else delete state.edits[r.row];
+      } else {
+        if (inp.value !== '') state.edits[r.row] = inp.value; else delete state.edits[r.row];
+      }
+      row.classList.toggle('changed', inp.value !== saved && inp.value !== '');
+      state.dirtyFlag = true;
+      updateSave();
+    };
+    inp.addEventListener('change', handler); inp.addEventListener('input', handler);
+    return inp;
+  }
+
+  function editableCount() {
+    return state.data ? state.data.rows.filter(function (r) { return r.editable; }).length : 0;
+  }
+
+  function updateSave() {
+    var btn = $('save');
+    if (state.view !== 'activity' || !state.data) { btn.disabled = true; return; }
+    var n = Object.keys(state.edits).length, d = state.data;
+    if (d.isCurrent) {
+      btn.disabled = false;
+      btn.textContent = n ? 'Save ' + n + ' change' + (n > 1 ? 's' : '') : 'Confirm ' + monthShort(d.period) + ' update';
+    } else {
+      var total = editableCount();
+      btn.disabled = n !== total;
+      btn.textContent = 'Save ' + monthShort(d.period);
+      if (n !== total) $('msg').textContent = n + ' of ' + total + ' filled in';
+      else if ($('msg').textContent.indexOf('filled in') >= 0) $('msg').textContent = '';
+    }
+  }
+
+  $('save').onclick = function () {
+    var d = state.data, name = $('name').value.trim(), msg = $('msg');
+    msg.className = 'msg'; msg.textContent = '';
+    if (!name) { msg.className = 'msg err'; msg.textContent = 'Enter your name first.'; $('name').focus(); return; }
+    var values = Object.keys(state.edits).map(function (k) { return { row: Number(k), value: state.edits[k] }; });
+    $('save').disabled = true; msg.textContent = 'Saving…';
+    google.script.run.withSuccessHandler(function (res) {
+      state.edits = {}; state.dirtyFlag = false; state.data = res.activity;
+      var it = state.items.filter(function (x) { return x.id === res.activity.id; })[0];
+      if (it && res.period === state.current) {
+        it.progress = res.activity.progress; it.submitted = true;
+      }
+      renderNav(); renderActivity();
+      msg.className = 'msg ok'; msg.textContent = monthName(res.period) + ' saved (' + res.saved + ' sub-activities).';
+    }).withFailureHandler(function (err) {
+      msg.className = 'msg err'; msg.textContent = (err.message || String(err)).replace(/^Error:\s*/, '');
+      updateSave();
+    }).saveActivity(d.id, name, d.period, values);
+  };
+
+  window.addEventListener('beforeunload', function (e) {
+    if (dirty()) { e.preventDefault(); e.returnValue = ''; }
+  });
+</script>
+</body>
+</html>
